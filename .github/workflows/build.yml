@@ -1,0 +1,63 @@
+name: Build Binary
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix-thinking-blocks]
+
+jobs:
+  build-windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - name: Build web
+        run: |
+          cd web && npm install && npm run build
+      - name: Build Windows binary
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: 0
+        run: |
+          go build -tags 'no_web' -ldflags "-s -w" -o cc-connect.exe ./cmd/cc-connect
+          ls -la cc-connect.exe
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: cc-connect-windows
+          path: cc-connect.exe
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - name: Build web
+        run: |
+          cd web && npm install && npm run build
+      - name: Build Linux binary
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: 0
+        run: |
+          go build -tags 'no_web' -ldflags "-s -w" -o cc-connect-linux-amd64 ./cmd/cc-connect
+          ls -la cc-connect-linux-amd64
+      - name: Upload Linux binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: cc-connect-linux-amd64
+          path: cc-connect-linux-amd64

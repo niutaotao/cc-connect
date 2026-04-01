@@ -18,7 +18,12 @@ import (
 	"time"
 
 	"github.com/chenhg5/cc-connect/core"
+	"regexp"
 )
+// thinkingBlockRegex strips <thinking>...</thinking> blocks from result content
+// to prevent thinking content from appearing in platform messages.
+var thinkingBlockRegex = regexp.MustCompile(`(?s)<thinking>.*?</thinking>`)
+
 
 // claudeSession manages a long-running Claude Code process using
 // --input-format stream-json and --permission-prompt-tool stdio.
@@ -292,7 +297,7 @@ func (cs *claudeSession) handleUser(raw map[string]any) {
 func (cs *claudeSession) handleResult(raw map[string]any) {
 	var content string
 	if result, ok := raw["result"].(string); ok {
-		content = result
+		content = thinkingBlockRegex.ReplaceAllString(result, "")
 	}
 	if sid, ok := raw["session_id"].(string); ok && sid != "" {
 		cs.sessionID.Store(sid)
