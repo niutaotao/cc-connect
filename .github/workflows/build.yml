@@ -1,0 +1,46 @@
+name: Build Binary
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix-thinking-blocks]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build web
+        run: |
+          cd web
+          npm install
+          npm run build
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          OUTPUT="cc-connect-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then OUTPUT="${OUTPUT}.exe"; fi
+          go build -tags 'no_web' -ldflags "-s -w" -o "$OUTPUT" ./cmd/cc-connect
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            powershell Compress-Archive -Path "$OUTPUT" -DestinationPath "cc-connect-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
+          else
+            zip "cc-connect-${{ matrix.goos }}-${{ matrix.goarch }}.zip" "$OUTPUT"
+          fi
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cc-connect-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: cc-connect-${{ matrix.goos }}-${{ matrix.goarch }}.zip
